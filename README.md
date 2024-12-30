@@ -76,7 +76,7 @@ All release files are signed with a PGP key that is available on [maximbaz.com](
 ```
 $ curl https://maximbaz.com/pgp_keys.asc | gpg --import
 $ curl https://keybase.io/maximbaz/pgp_keys.asc | gpg --import
-$ gpg --recv-keys EB4F9E5A60D32232BB52150C12C87A28FEAC6B20
+$ gpg --recv-keys 56C3E775E72B0C8B1C0C1BD0B5DB77409B11B601
 ```
 
 To verify the signature of a given file, use `$ gpg --verify <file>.asc`.
@@ -85,11 +85,11 @@ It should report:
 
 ```
 gpg: Signature made ...
-gpg:                using RSA key 8053EB88879A68CB4873D32B011FDC52DA839335
+gpg:                using EDDSA key 04D7A219B0ABE4C2B62A5E654A2B758631E1FD91
 gpg: Good signature from "Maxim Baz <...>"
 gpg:                 aka ...
-Primary key fingerprint: EB4F 9E5A 60D3 2232 BB52  150C 12C8 7A28 FEAC 6B20
-     Subkey fingerprint: 8053 EB88 879A 68CB 4873  D32B 011F DC52 DA83 9335
+Primary key fingerprint: 56C3 E775 E72B 0C8B 1C0C  1BD0 B5DB 7740 9B11 B601
+     Subkey fingerprint: 04D7 A219 B0AB E4C2 B62A  5E65 4A2B 7586 31E1 FD91
 ```
 
 ## Updates
@@ -229,6 +229,7 @@ The list of available options:
 | --------------------------------------------------------------- | ------------------------------------------------------------- |
 | Automatically submit forms after filling (aka `autoSubmit`)     | Make Browserpass automatically submit the login form for you  |
 | Enable support for OTP tokens (aka `enableOTP`)                 | Generate TOTP codes if a TOTP seed is found in the pass entry |
+| Hide badge counter on the toolbar icon (aka `hideBadge`)        | Do not show badge with number of matching password entries    |
 | Default username (aka `username`)                               | Username to use when it's not defined in the password file    |
 | Custom gpg binary (aka `gpgPath`)                               | Path to a custom `gpg` binary to use                          |
 | Custom store locations                                          | List of password stores to use                                |
@@ -242,6 +243,7 @@ Browserpass allows configuring certain settings in different places places using
     - `autoSubmit`
 1. Options defined in `.browserpass.json` file located in the root of a password store:
     - `autoSubmit`
+    - `hideBadge`
     - `enableOTP`
     - `gpgPath`
     - `username`
@@ -251,6 +253,7 @@ Browserpass allows configuring certain settings in different places places using
 1. Options defined in browser extension options:
     - Automatically submit forms after filling (aka `autoSubmit`)
     - Enable support for OTP tokens (aka `enableOTP`)
+    - Hide badge counter on the toolbar icon (aka `hideBadge`)
     - Default username (aka `username`)
     - Custom gpg binary (aka `gpgPath`)
     - Custom store locations

@@ -2,7 +2,7 @@
     "manifest_version": 2,
     "name": "Browserpass",
     "description": "Browser extension for zx2c4's pass (password manager)",
-    "version": "3.8.0",
+    "version": "3.9.0",
     "author": "Maxim Baz <browserpass@maximbaz.com>, Steve Gilberd <steve@erayd.net>",
     "homepage_url": "https://github.com/browserpass/browserpass-extension",
     "background": {
@@ -41,7 +41,7 @@
     "applications": {
         "gecko": {
             "id": "browserpass@maximbaz.com",
-            "strict_min_version": "54.0"
+            "strict_min_version": "58.0"
         }
     },
     "commands": {

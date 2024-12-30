@@ -19,6 +19,7 @@ var defaultSettings = {
     username: null,
     theme: "auto",
     enableOTP: false,
+    hideBadge: false,
     caps: {
         save: false,
         delete: false,
@@ -120,15 +121,19 @@ async function updateMatchingPasswordsCount(tabId, forceRefresh = false) {
         if (forceRefresh || Date.now() > badgeCache.expires) {
             badgeCache.isRefreshing = true;
 
+            let files = [];
             let settings = await getFullSettings();
-            let response = await hostAction(settings, "list");
-            if (response.status != "ok") {
-                throw new Error(JSON.stringify(response));
+            if (!settings.hideBadge) {
+                let response = await hostAction(settings, "list");
+                if (response.status != "ok") {
+                    throw new Error(JSON.stringify(response));
+                }
+                files = response.data.files;
             }
 
             const CACHE_TTL_MS = 60 * 1000;
             badgeCache = {
-                files: response.data.files,
+                files: files,
                 settings: settings,
                 expires: Date.now() + CACHE_TTL_MS,
                 isRefreshing: false,
@@ -156,6 +161,7 @@ async function updateMatchingPasswordsCount(tabId, forceRefresh = false) {
             tabId: tabId,
         });
     } catch (e) {
+        badgeCache.isRefreshing = false;
         console.log(e);
     }
 }
@@ -1117,12 +1123,17 @@ async function parseFields(settings, login) {
         if (login.fields.otp.match(/^otpauth:\/\/.+/i)) {
             // attempt to parse otp data as URI
             try {
-                let url = new URL(login.fields.otp.toLowerCase());
-                let otpParts = url.pathname.split("/").filter((s) => s.trim());
+                // change otpauth:// to http:// to work around a bug in firefox versions
+                // between 122 and 132 where the hostname is read as an empty string for
+                // urls that use a custom protocol like otpauth:// so the
+                // parsing behavior of such urls changes depending on
+                // browser version, while if we change it to http:// first
+                // then we always get the same result
+                let url = new URL(login.fields.otp.toLowerCase().replace("otpauth://", "http://"));
                 login.fields.otp = {
                     raw: login.fields.otp,
                     params: {
-                        type: otpParts[0] === "otp" ? "totp" : otpParts[0],
+                        type: url.host === "otp" ? "totp" : url.host,
                         secret: url.searchParams.get("secret").toUpperCase(),
                         algorithm: url.searchParams.get("algorithm") || "sha1",
                         digits: parseInt(url.searchParams.get("digits") || "6"),
@@ -1238,6 +1249,9 @@ async function saveSettings(settings) {
             await chrome.storage.local.set(save);
         }
     }
+
+    // refresh in case user has just toggled showing badge counter
+    updateMatchingPasswordsCount(settings.tab.id, true);
 }
 
 /**

@@ -1,6 +1,6 @@
 {
     "name": "browserpass-extension",
-    "version": "3.8.0",
+    "version": "3.9.0",
     "description": "Browser extension for zx2c4's pass (password manager) - Community Edition.",
     "homepage": "https://github.com/browserpass/browserpass-extension",
     "license": "ISC",
@@ -22,7 +22,7 @@
         "idb": "^4.0.5",
         "ignore": "^5.1.8",
         "mithril": "^1.1.7",
-        "moment": "^2.27.0",
+        "moment": "^2.30.1",
         "otplib": "^11.0.0",
         "sha1": "^1.1.1"
     },
