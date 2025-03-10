@@ -89,6 +89,16 @@ chrome.commands.onCommand.addListener(async (command) => {
     }
 });
 
+/**
+ * ensure service worker remains awake till clipboard is cleared
+ *
+ * @since 3.10.0
+ */
+async function keepAlive() {
+    chrome.alarms.create("keepAlive", { when: Date.now() + 25e3 });
+    await getFullSettings();
+}
+
 // handle fired alarms
 chrome.alarms.onAlarm.addListener(async (alarm) => {
     if (alarm.name === "clearClipboard") {
@@ -96,6 +106,13 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
             copyToClipboard("", false);
         }
         lastCopiedText = null;
+    } else if (alarm.name === "keepAlive") {
+        const current = await readFromClipboard();
+        console.debug("keepAlive fired", { current, lastCopiedText });
+        // stop if either value changes
+        if (current === lastCopiedText) {
+            await keepAlive()
+        }
     }
 });
 
@@ -176,17 +193,45 @@ async function updateMatchingPasswordsCount(tabId, forceRefresh = false) {
  * @return void
  */
 async function copyToClipboard(text, clear = true) {
-    await setupOffscreenDocument("offscreen/offscreen.html");
-    chrome.runtime.sendMessage({
-        type: "copy-data-to-clipboard",
-        target: "offscreen-doc",
-        data: text,
-    });
+    if (isChrome()) {
+        await setupOffscreenDocument("offscreen/offscreen.html");
+        chrome.runtime.sendMessage({
+            type: "copy-data-to-clipboard",
+            target: "offscreen-doc",
+            data: text,
+        });
+    } else {
+        document.addEventListener(
+            "copy",
+            function (e) {
+                e.clipboardData.setData("text/plain", text);
+                e.preventDefault();
+            },
+            { once: true }
+        );
+        document.execCommand("copy");
+    }
 
+    // @TODO: not sure alarm is firing when background is idle/inactive
     if (clear) {
         lastCopiedText = text;
         chrome.alarms.create("clearClipboard", { delayInMinutes: 1 });
+        await keepAlive()
     }
+}
+
+/**
+ * returns true if agent string is Chrome / Chromium
+ *
+ * @since 3.10.0
+ */
+function isChrome() {
+    const ua = navigator.userAgent;
+    const matches = ua.match(/(chrom)/i) || [];
+    if (Object.keys(matches).length > 2 && /chrom/i.test(matches[1])) {
+        return true;
+    }
+    return false;
 }
 
 /**
@@ -197,22 +242,35 @@ async function copyToClipboard(text, clear = true) {
  * @return string The current plaintext content of the clipboard
  */
 async function readFromClipboard() {
-    await setupOffscreenDocument("offscreen/offscreen.html");
+    if (isChrome()) {
+        await setupOffscreenDocument("offscreen/offscreen.html");
 
-    const response = await chrome.runtime.sendMessage({
-        type: "read-from-clipboard",
-        target: "offscreen-doc",
-    });
+        const response = await chrome.runtime.sendMessage({
+            type: "read-from-clipboard",
+            target: "offscreen-doc",
+        });
 
-    if (response.status != "ok") {
-        console.error(
-            "failure reading from clipboard in offscreen document",
-            response.message || undefined
-        );
-        return;
+        if (response.status != "ok") {
+            console.error(
+                "failure reading from clipboard in offscreen document",
+                response.message || undefined
+            );
+            return;
+        }
+
+        return response.message;
+    } else {
+        const ta = document.createElement("textarea");
+        // these lines are carefully crafted to make paste work in both Chrome and Firefox
+        ta.contentEditable = true;
+        ta.textContent = "";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("paste");
+        const content = ta.value;
+        document.body.removeChild(ta);
+        return content;
     }
-
-    return response.message;
 }
 
 /**
@@ -571,6 +629,12 @@ async function getFullSettings() {
         defaultStore: {},
     });
     var response = await hostAction(configureSettings, "configure");
+    console.debug(
+        `getFullSettings => hostAction(configureSettings..${
+            Object.keys(configureSettings).length
+        }, configure)`,
+        { configureSettings }
+    );
     if (response.status != "ok") {
         settings.hostError = response;
     }
